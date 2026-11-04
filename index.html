@@ -438,6 +438,31 @@
         .hero .hero-intro, .hero .hero-intro b { color: #FFFFFF; }
         .hero .btn-x.outline-white { color: #FFFFFF; border-color: #FFFFFF; }
         .section-gap { margin-top: clamp(36px, 6vw, 64px); }
+
+        /* ---------- one style across every page (matches the homepage) ---------- */
+        .page-hero { background: linear-gradient(180deg, var(--orange) 0, #BF590B 100%); padding-block: clamp(40px, 8vw, 72px); }
+        .page-hero .lead { color: #FFFFFF; font-size: clamp(1.1rem, 2.6vw, 1.25rem); max-width: 46ch; }
+        .band .stack:has(> .section-title), .band .stack-lg > .stack:has(> .section-title) { align-items: center; text-align: center; }
+        .band .stack:has(> .section-title) .lead { margin-inline: auto; }
+        .band .section-title { margin-bottom: 1.5rem; }
+        .band .grid > .stack:has(> .section-title), .band .stack-lg > .stack:has(> .section-title) { align-items: flex-start; text-align: left; }
+        .band .grid > .stack:has(> .section-title) .section-title, .band .grid > .stack:has(> .section-title) .lead { text-align: left; margin-inline: 0; }
+        .band .grid > .stack > .section-title::after { margin-left: 0; }
+        .band .stack-lg > .stack:has(> .section-title) { align-items: center; text-align: center; }
+        .band .pack .stack { align-items: flex-start; text-align: left; }
+        .pack p.muted { color: #fff; }
+        .pack h2, .pack h3, .pack h2.section-title { color: #fff; text-align: left; }
+        .pack h2::after { display: none; }
+        .card, .card.flat, .path-card, .stat {
+            background: var(--surface); border: 0; border-top: 4px solid var(--orange); border-radius: 14px;
+            box-shadow: 0 5px 15px rgba(42,26,16,0.08);
+        }
+        .card h3, .card h2:not(.section-title) { color: var(--orange-text); }
+        .stat { text-align: center; }
+        .band.orange .stat { background: rgba(255,255,255,.14); border-top-color: #fff; box-shadow: none; }
+        .band.alt .card, .band.alt .card.flat { background: var(--surface); }
+        .band .card .section-title { margin-bottom: .5rem; }
+
 </style>
 <!-- ==================== Small strip ==================== -->
 <div class="strip"><div class="wrap"><a href="#schools">Teachers: get the free workshop kit <span aria-hidden="true">&rsaquo;</span></a></div></div>
@@ -616,17 +641,19 @@
     };
     try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
   }
-  async function saveFile(filename, data, label) {
-    var dl = null;
-    try { dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (e) { dl = null; }
-    if (!dl) { toast('Downloads are not available in this view. Open the page in claude.ai to save the file.'); return; }
-    try { await dl.save({ filename: filename, data: data }); toast(label + ' saved'); }
-    catch (e) { if (e && e.code === 'declined') return; toast('Could not save the file here.'); }
+  function saveFile(filename, data, label) {
+    try {
+      var blob = data instanceof Blob ? data : new Blob([data], { type: 'application/json' });
+      var url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      toast(label + ' saved');
+    } catch (e) { toast('Could not save the file.'); }
   }
   async function savePdf() {
     try {
       var r = await fetch(PDF_NAME); if (!r.ok) throw new Error('missing');
-      await saveFile(PDF_NAME, await r.blob(), 'Workshop pack');
+      saveFile(PDF_NAME, await r.blob(), 'Workshop pack');
     } catch (e) { toast('The pack could not be loaded. Try again in a moment.'); }
   }
 
@@ -647,7 +674,7 @@
   var SLIDERS = '<svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10m4 0h2M4 17h2m4 0h10M14 4v6M8 14v6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>';
   var SHIELD = '<svg class="mascot" viewBox="0 0 24 24" aria-hidden="true" style="width:96px"><path d="M12 2.500 4 5.500v6c0 5 3.500 8.500 8 9.500 4.500-1 8-4.500 8-9.500v-6z" fill="#B85208" stroke="#2A1A10" stroke-width="1.2" stroke-linejoin="round"/><path d="m8 12 3 3 5-6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-  function pageHero(label, title, lead) { return '<section class="page-hero"><div class="wrap"><p class="label">' + label + '</p><h1>' + title + '</h1><p class="lead">' + lead + '</p></div></section>'; }
+  function pageHero(label, title, lead) { return '<section class="page-hero"><div class="wrap"><h1>' + title + '</h1><p class="lead">' + lead + '</p></div></section>'; }
 
   var ACC = [
     { title: 'Learn by doing', sub: 'Short lessons you tap, tick and try.', art: 'pixel', h: 'Interactive lessons', p: [
@@ -726,7 +753,7 @@
     '<section class="band alt"><div class="wrap stack-lg"><div class="stack"><h2 class="section-title" style="margin-bottom:0">' + lessons.length + ' lessons across ' + units.length + ' topics</h2><p class="lead" style="margin:0 auto;text-align:center">Each lesson has five short articles with tap-to-reveal activities, then a quiz. Open any lesson to see its content and sources in the library.</p></div>' + lessonList() + '</div></section>' +
 
     '<section class="band orange"><div class="wrap stack-lg"><div class="stat-row">' + stat(lessons.length, 'Lessons') + stat(units.length, 'Topics') + stat(DATA.questions.length, 'Questions') + stat(Object.keys(kinds).length, 'Activity types') + '</div>' +
-      '<div class="stack"><h2>Every dot is a question</h2><p class="lead">Each lesson ends with a four question quiz. The shape of the dot shows the question type.</p></div>' + qmap() +
+      '<div class="stack"><h2 class="section-title">Every dot is a question</h2><p class="lead">Each lesson ends with a four question quiz. The shape of the dot shows the question type.</p></div>' + qmap() +
       '<div class="row" style="justify-content:center"><a class="btn-x outline-white" href="#library">Browse the library ' + CHEV_R + '</a></div></div></section>' +
 
     '<section class="band"><div class="wrap stack-lg"><div class="stack"><h2 class="section-title" style="margin-bottom:0">Guidance our lessons draw on</h2><p class="lead" style="margin:0 auto;text-align:center">Each lesson lists its sources. These organisations publish the guidance we cite. Citing them does not mean they have reviewed or endorsed xData.</p></div><div class="srcs">' + sources() + '</div></div></section>' +
@@ -747,11 +774,11 @@
         '<div class="shot">' + phone('lesson', 'A lesson article with tap-to-reveal highlights') + '<p><b>2. Tap to learn</b><br><span class="muted small">Tap each highlight to see why it matters.</span></p></div>' +
         '<div class="shot">' + phone('quiz', 'A quiz question showing a correct answer and an explanation') + '<p><b>3. Check yourself</b><br><span class="muted small">Every answer comes with a short explanation.</span></p></div>' +
       '</div></div></section>' +
-    '<section class="band alt"><div class="wrap grid g2"><article class="card"><span class="tag ok" style="align-self:flex-start">Under 18</span><h2 style="font-size:1.5rem">The game path</h2><ul class="checks"><li>Pixel the fox guides every lesson.</li><li>3 hearts per lesson. A wrong answer costs one.</li><li>XP, levels, streaks, stars and 7 badges.</li><li>A dashboard with weekly XP and topic mastery.</li><li>No public chat or comments.</li></ul></article>' +
-      '<article class="card"><span class="tag" style="align-self:flex-start;background:var(--magenta-soft);color:var(--magenta-ink)">18 and over</span><h2 style="font-size:1.5rem">The online course</h2><ul class="checks"><li>Three weekly modules with six lessons.</li><li>Seven steps per lesson: five articles, a discussion and a test.</li><li>Test pass mark of ' + Math.round(DATA.course.passMark * 100) + '%. Retake as often as you like.</li><li>A progress screen and a Statement of Participation.</li><li>Reflections are saved on your device and checked for personal details.</li></ul></article></div></section>' +
-    '<section class="band"><div class="wrap grid g2"><div class="stack"><p class="label">Four activity types</p><h2>Things to tap, tick and try</h2><p class="lead">Lessons use small interactive pieces instead of long text.</p></div>' +
+    '<section class="band alt"><div class="wrap grid g2"><article class="card"><span class="tag ok" style="align-self:flex-start">Under 18</span><h2 class="section-title" style="font-size:1.5rem">The game path</h2><ul class="checks"><li>Pixel the fox guides every lesson.</li><li>3 hearts per lesson. A wrong answer costs one.</li><li>XP, levels, streaks, stars and 7 badges.</li><li>A dashboard with weekly XP and topic mastery.</li><li>No public chat or comments.</li></ul></article>' +
+      '<article class="card"><span class="tag" style="align-self:flex-start;background:var(--magenta-soft);color:var(--magenta-ink)">18 and over</span><h2 class="section-title" style="font-size:1.5rem">The online course</h2><ul class="checks"><li>Three weekly modules with six lessons.</li><li>Seven steps per lesson: five articles, a discussion and a test.</li><li>Test pass mark of ' + Math.round(DATA.course.passMark * 100) + '%. Retake as often as you like.</li><li>A progress screen and a Statement of Participation.</li><li>Reflections are saved on your device and checked for personal details.</li></ul></article></div></section>' +
+    '<section class="band"><div class="wrap grid g2"><div class="stack"><h2 class="section-title">Things to tap, tick and try</h2><p class="lead">Lessons use small interactive pieces instead of long text.</p></div>' +
       '<ul class="checks" style="align-self:center"><li><b>Tap to reveal.</b> Highlights that explain why a detail matters.</li><li><b>Oversharing meter.</b> Tick what an app asks for and watch the risk rise.</li><li><b>Step-by-step flow.</b> See how a leak turns into a scam.</li><li><b>Password tester.</b> Rate made-up passwords. Nothing is stored or sent.</li></ul></div></section>' +
-    '<section class="band alt"><div class="wrap stack-lg"><div class="stack"><p class="label">Install</p><h2>Add it to your home screen</h2><p class="lead">The app is a web app, so there is nothing to download from a store. Once added it opens like any other app.</p></div>' +
+    '<section class="band alt"><div class="wrap stack-lg"><div class="stack"><h2 class="section-title">Add it to your home screen</h2><p class="lead">The app is a web app, so there is nothing to download from a store. Once added it opens like any other app.</p></div>' +
       '<div class="grid g3"><div class="card flat"><h3>iPhone and iPad</h3><p class="muted small">Open the app in Safari, tap Share, then Add to Home Screen.</p></div><div class="card flat"><h3>Android</h3><p class="muted small">Open the app in Chrome, tap the menu, then Install app or Add to Home screen.</p></div><div class="card flat"><h3>Laptop</h3><p class="muted small">Open the app in Chrome or Edge and use the install icon in the address bar.</p></div></div></div></section>';
   }
 
@@ -792,11 +819,11 @@
       '<div class="stack"><div class="chips" role="group" aria-label="Filter by topic"><button type="button" class="chip" data-filter="all" aria-pressed="' + (state.filter === 'all') + '">All</button>' +
         units.map(function (u) { return '<button type="button" class="chip" data-filter="' + u.id + '" aria-pressed="' + (state.filter === u.id) + '">' + esc(u.title) + '</button>'; }).join('') + '</div>' +
         '<div class="stack" id="lesson-cards">' + lessons.filter(function (l) { return state.filter === 'all' || l.unit === state.filter; }).map(lessonCard).join('') + '</div></div></div></section>' +
-    '<section class="band alt"><div class="wrap stack-lg"><div class="stack"><p class="label">Content feed</p><h2>One file feeds the app</h2><p class="lead">The app loads <code>content/lessons.json</code> when it starts. Change a lesson in the file and the app shows the change after the next build. The same file draws this library and the teacher answer key.</p></div>' +
+    '<section class="band alt"><div class="wrap stack-lg"><div class="stack"><h2 class="section-title">One file feeds the app</h2><p class="lead">The app loads <code>content/lessons.json</code> when it starts. Change a lesson in the file and the app shows the change after the next build. The same file draws this library and the teacher answer key.</p></div>' +
       '<div class="row"><button type="button" class="btn-x" data-act="json">Save lessons.json</button><button type="button" class="btn-x ghost" data-act="copyjson">Copy the full file</button></div>' +
       '<div class="table-wrap"><table><thead><tr><th>Field</th><th>What it holds</th></tr></thead><tbody>' + fields.map(function (f) { return '<tr><td><code>' + f[0] + '</code></td><td>' + f[1] + '</td></tr>'; }).join('') + '</tbody></table></div>' +
       '<div class="stack"><p class="label">Example: lesson 1, first and last two steps</p><pre class="codebox" tabindex="0" aria-label="Example JSON"><code>' + esc(sample) + '</code></pre></div></div></section>' +
-    '<section class="band"><div class="wrap grid g2"><div class="stack"><p class="label">Quality</p><h2>How lessons are checked</h2></div><ul class="checks"><li>Each lesson lists its sources, such as ICO and NCSC guidance.</li><li>Status shows draft or the date of review.</li><li>Questions have one clear answer and a short explanation.</li><li>Examples use made-up people, numbers and websites.</li></ul></div></section>';
+    '<section class="band"><div class="wrap grid g2"><div class="stack"><h2 class="section-title">How lessons are checked</h2></div><ul class="checks"><li>Each lesson lists its sources, such as ICO and NCSC guidance.</li><li>Status shows draft or the date of review.</li><li>Questions have one clear answer and a short explanation.</li><li>Examples use made-up people, numbers and websites.</li></ul></div></section>';
   }
 
   function pSchools() {
@@ -808,25 +835,25 @@
       ['45 to 50 min', 'Plenary and pledge', 'Each pupil writes one thing they will do differently. Remind them where to report.', 'Pledge card']];
     return '' +
     '' + pageHero('For schools', 'Run an xData workshop', 'Everything a teacher needs to run a privacy and AI safety session: a lesson plan, activity sheets, an answer key and safeguarding notes. The kit is free to use.') + '<section class="band"><div class="wrap stack-lg">' +
-      '<div class="pack"><div class="stack"><h2 style="font-size:1.5rem">Workshop Pack (PDF, 7 pages)</h2><p class="muted">Formats, the 50 minute plan, Activity Sheets A and B, pledge and safe word cards, the full answer key and safeguarding notes.</p></div><div class="row"><button type="button" class="btn-x" data-act="pdf">Save the pack</button><a class="btn-x ghost" href="#library">Answer key</a></div></div></div></section>' +
+      '<div class="pack"><div class="stack"><h2 class="section-title" style="font-size:1.5rem">Workshop Pack (PDF, 7 pages)</h2><p class="muted">Formats, the 50 minute plan, Activity Sheets A and B, pledge and safe word cards, the full answer key and safeguarding notes.</p></div><div class="row"><button type="button" class="btn-x" data-act="pdf">Save the pack</button><a class="btn-x ghost" href="#library">Answer key</a></div></div></div></section>' +
 
-    '<section class="band alt"><div class="wrap stack-lg"><div class="stack"><p class="label">Choose a format</p><h2>Three ways to run it</h2></div><div class="grid g3">' +
+    '<section class="band alt"><div class="wrap stack-lg"><div class="stack"><h2 class="section-title">Three ways to run it</h2></div><div class="grid g3">' +
       '<article class="card format"><span class="big">20 min</span><h3>Assembly starter</h3><p class="muted small">Whole year group, one screen.</p><p>Show the red-flag text, vote with hands, and share three rules.</p></article>' +
       '<article class="card format"><span class="big">50 min</span><h3>Classroom workshop</h3><p class="muted small">One class, pairs on devices.</p><p>Starter, one app lesson, scenario cards and a pledge. Full plan below.</p></article>' +
       '<article class="card format"><span class="big">3 x 50 min</span><h3>Cyber week drop-down</h3><p class="muted small">A day or a week for a year group.</p><p>Session 1: data and passwords. Session 2: scams and identity theft. Session 3: deepfakes and chatbots.</p></article></div></div></section>' +
 
-    '<section class="band"><div class="wrap grid g2" style="align-items:start"><div class="stack-lg"><div class="stack"><p class="label">The 50 minute plan</p><h2>Spot the phish</h2><p class="muted">Swap in any lesson from the library and keep the same shape.</p></div>' +
+    '<section class="band"><div class="wrap grid g2" style="align-items:start"><div class="stack-lg"><div class="stack"><h2 class="section-title">Spot the phish</h2><p class="muted">Swap in any lesson from the library and keep the same shape.</p></div>' +
       '<div class="stack"><h3>Before you start</h3><ul class="checks"><li>Open the app on your own device and finish the lesson once. It takes 10 to 15 minutes.</li><li>Check pupil devices can reach the web app. If not, use the assembly format with one screen.</li><li>Print the activity sheets or have pupils copy the text.</li><li>Know who your designated safeguarding lead is.</li></ul></div></div>' +
       '<div class="timeline">' + plan.map(function (p) { return '<div class="tl"><span class="time">' + p[0] + '</span><div><h3>' + p[1] + '</h3><p class="small">' + p[2] + '</p><p class="need">You need: ' + p[3] + '</p></div></div>'; }).join('') + '</div></div></section>' +
 
-    '<section class="band alt"><div class="wrap stack-lg"><div class="stack"><p class="label">Activity sheets</p><h2>Ready to copy or print</h2><p class="muted">The pack has these as printable pages. Copy the text here to paste into your own worksheet.</p></div><div class="grid g2">' +
+    '<section class="band alt"><div class="wrap stack-lg"><div class="stack"><h2 class="section-title">Ready to copy or print</h2><p class="muted">The pack has these as printable pages. Copy the text here to paste into your own worksheet.</p></div><div class="grid g2">' +
       '<div class="sheet"><h3>Sheet A: Spot the red flags</h3><p class="scam">URGENT: your parcel is on hold. Pay a £1.99 fee at parcel-redeliver.xyz within 1 hour or it will be returned.</p><p class="small">Pupils circle the red flags, list three, choose what to do first and say where to report.</p><div class="row"><button type="button" class="btn-x ghost sm" data-copy="A">Copy sheet text</button></div></div>' +
       '<div class="sheet"><h3>Sheet B: Scenario cards</h3><p class="small">Six cards, one per lesson theme. Groups pick a card and decide what they would do first.</p><ul class="small" style="margin:0;padding-left:20px"><li>A friend asks for your password.</li><li>A shocking video of a famous person.</li><li>A call that sounds like a relative.</li></ul><div class="row"><button type="button" class="btn-x ghost sm" data-copy="B">Copy all six cards</button></div></div></div></div></section>' +
 
-    '<section class="band"><div class="wrap grid g2" style="align-items:start"><div class="stack"><p class="label">Safeguarding and data</p><h2>Before you run a session</h2><div class="callout">These notes support your school policy. They do not replace it. All lessons are drafts awaiting review.</div></div>' +
+    '<section class="band"><div class="wrap grid g2" style="align-items:start"><div class="stack"><h2 class="section-title">Before you run a session</h2><div class="callout">These notes support your school policy. They do not replace it. All lessons are drafts awaiting review.</div></div>' +
       '<div class="stack"><h3>Safeguarding</h3><ul class="checks"><li>Tell your designated safeguarding lead what you are running and when.</li><li>Use only made-up examples. Never ask pupils to share their own messages, accounts or photos.</li><li>If a pupil says something worrying, follow your school policy and report it the same day. Childline is free on 0800 1111.</li><li>The deepfakes lesson mentions fake intimate images. Handle it with care.</li></ul><h3>Data</h3><ul class="checks"><li>No accounts. Progress stays on each pupil\'s device.</li><li>No adverts and no selling data.</li><li>You cannot see pupil results, so use the activity sheets to check understanding.</li><li>Run your own data protection check before using any app with pupils.</li></ul><h3>Curriculum</h3><p class="small muted">The topics support online safety teaching in Computing, PSHE and RSHE. Check the wording against your own scheme of work.</p></div></div></section>' +
 
-    '<section class="band alt"><div class="wrap grid g2" style="align-items:start"><div class="stack"><p class="label">Questions</p><h2>Teacher FAQ</h2></div><div>' +
+    '<section class="band alt"><div class="wrap grid g2" style="align-items:start"><div class="stack"><h2 class="section-title">Teacher FAQ</h2></div><div>' +
       faq('What age is it for?', 'There are two paths. Pupils under 18 use the game path. Staff and adults use the course. The path picker stores an age band only.') +
       faq('Do pupils need accounts?', 'No. Pupils open the app and start. There is nothing to sign up for.') +
       faq('What devices work?', 'Any modern phone, tablet or laptop with a web browser. Pairs sharing a device work well.') +
@@ -834,7 +861,7 @@
       faq('Does it work offline?', 'Once the app has loaded and been installed, lessons work without a connection.') +
       faq('Can I change the lessons?', 'Yes. Lessons live in one content file. See the Content feed section of the Resource Library.') + '</div></div></section>' +
 
-    '<section class="band" id="request"><div class="wrap grid g2" style="align-items:start"><div class="stack"><p class="label">Request a session</p><h2>Plan your workshop</h2><p class="lead">Fill in the details and copy your request. ' + (CONTACT ? 'Send it to <b>' + esc(CONTACT) + '</b>.' : 'Send it to your xData contact.') + '</p></div>' +
+    '<section class="band" id="request"><div class="wrap grid g2" style="align-items:start"><div class="stack"><h2 class="section-title">Plan your workshop</h2><p class="lead">Fill in the details and copy your request. ' + (CONTACT ? 'Send it to <b>' + esc(CONTACT) + '</b>.' : 'Send it to your xData contact.') + '</p></div>' +
       '<div class="stack"><form class="req" id="reqform" novalidate>' +
         fld('School name', 'school', 'text', true) + fld('Your name and role', 'who', 'text', true) +
         '<div class="field"><label for="year">Year group</label><select id="year"><option>Year 5 to 6</option><option selected>Year 7 to 9</option><option>Year 10 to 11</option><option>Sixth form</option><option>Staff</option></select></div>' +
